@@ -1,0 +1,25 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build output
+bin/
+obj/
+
+# SQL Server Data Tools
+*.dbmdl
+*.jfm
+
+# SQL Server Express files
+*.mdf
+*.ldf
+
+# Publish profiles (optional - puede incluirse si se quiere compartir)
+# Publish/
+
+# OS
+Thumbs.db
+.DS_Store
