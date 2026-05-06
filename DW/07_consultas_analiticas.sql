@@ -211,9 +211,81 @@ ORDER BY Pais, RankEnPais;
 GO
 
 -- =====================================================================
--- CONSULTA 10: Resumen ejecutivo del Data Warehouse
+-- CONSULTA 10: Análisis de Pareto (ABC) de Productos
+-- Pregunta: ¿Qué productos concentran el mayor porcentaje (80%) de las ventas?
 -- =====================================================================
-PRINT '=== CONSULTA 10: Resumen Ejecutivo del DW ===';
+PRINT '=== CONSULTA 10: Análisis de Pareto de Productos ===';
+
+WITH VentasPorProducto AS (
+    SELECT 
+        p.NombreProducto,
+        SUM(f.MontoVenta) AS Ventas
+    FROM dbo.Fact_Ventas AS f
+    INNER JOIN dbo.Dim_Producto AS p ON f.SK_Producto = p.SK_Producto
+    GROUP BY p.NombreProducto
+),
+VentasAcumuladas AS (
+    SELECT 
+        NombreProducto,
+        Ventas,
+        SUM(Ventas) OVER(ORDER BY Ventas DESC) AS VentasAcumuladas,
+        SUM(Ventas) OVER() AS TotalVentasGlobal
+    FROM VentasPorProducto
+)
+SELECT 
+    NombreProducto,
+    Ventas,
+    CAST((Ventas / TotalVentasGlobal) * 100 AS DECIMAL(5,2)) AS PorcentajeIndividual,
+    CAST((VentasAcumuladas / TotalVentasGlobal) * 100 AS DECIMAL(5,2)) AS PorcentajeAcumulado,
+    CASE 
+        WHEN (VentasAcumuladas / TotalVentasGlobal) <= 0.80 THEN 'A (Top 80%)'
+        WHEN (VentasAcumuladas / TotalVentasGlobal) <= 0.95 THEN 'B (Siguiente 15%)'
+        ELSE 'C (Último 5%)'
+    END AS ClasificacionABC
+FROM VentasAcumuladas
+ORDER BY Ventas DESC;
+GO
+
+-- =====================================================================
+-- CONSULTA 11: Rendimiento de Proveedores por Volumen de Ventas
+-- Pregunta: ¿Qué proveedores nos suministran los productos más rentables?
+-- =====================================================================
+PRINT '=== CONSULTA 11: Rendimiento de Proveedores ===';
+
+SELECT
+    p.NombreProveedor,
+    p.PaisProveedor,
+    COUNT(DISTINCT p.SK_Producto)           AS ProductosSuministrados,
+    SUM(f.Cantidad)                         AS UnidadesVendidas,
+    SUM(f.MontoVenta)                       AS VentasGeneradas
+FROM dbo.Fact_Ventas            AS f
+INNER JOIN dbo.Dim_Producto     AS p ON f.SK_Producto = p.SK_Producto
+GROUP BY p.NombreProveedor, p.PaisProveedor
+ORDER BY VentasGeneradas DESC;
+GO
+
+-- =====================================================================
+-- CONSULTA 12: Ventas por Día de la Semana (Estacionalidad Semanal)
+-- Pregunta: ¿Cuáles son los días de mayor actividad comercial?
+-- =====================================================================
+PRINT '=== CONSULTA 12: Ventas por Día de la Semana ===';
+
+SELECT
+    t.DiaSemana,
+    t.NombreDiaSemana,
+    COUNT(DISTINCT f.OrderID)               AS TotalOrdenes,
+    SUM(f.MontoVenta)                       AS VentasTotales,
+    SUM(f.MontoVenta) / COUNT(DISTINCT f.OrderID) AS TicketPromedioDiario
+FROM dbo.Fact_Ventas        AS f
+INNER JOIN dbo.Dim_Tiempo   AS t ON f.SK_Tiempo = t.SK_Tiempo
+GROUP BY t.DiaSemana, t.NombreDiaSemana
+ORDER BY t.DiaSemana;
+GO
+
+-- =====================================================================
+-- CONSULTA 13: Resumen ejecutivo del Data Warehouse
+-- =====================================================================
+PRINT '=== CONSULTA 13: Resumen Ejecutivo del DW ===';
 
 SELECT
     (SELECT COUNT(*) FROM dbo.Dim_Producto)       AS TotalProductos,
