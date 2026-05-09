@@ -3,15 +3,16 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <Name>NorthwindDW</Name>
+    <Name>NorthWind_OLTP</Name>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectVersion>4.1</ProjectVersion>
-    <ProjectGuid>{a1b2c3d4-e5f6-7890-abcd-ef1234567890}</ProjectGuid>
-    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql150DatabaseSchemaProvider</DSP>
+    <ProjectGuid>{fbb1162d-e1da-4524-9d5e-8631302ed9c3}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql170DatabaseSchemaProvider</DSP>
     <OutputType>Database</OutputType>
-    <RootPath />
-    <RootNamespace>NorthwindDW</RootNamespace>
-    <AssemblyName>NorthwindDW</AssemblyName>
+    <RootPath>
+    </RootPath>
+    <RootNamespace>NorthWind_OLTP</RootNamespace>
+    <AssemblyName>NorthWind_OLTP</AssemblyName>
     <ModelCollation>1033, CI</ModelCollation>
     <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
     <DeployToDatabase>True</DeployToDatabase>
@@ -21,8 +22,6 @@
     <SqlServerVerification>False</SqlServerVerification>
     <IncludeCompositeObjects>True</IncludeCompositeObjects>
     <TargetDatabaseSet>True</TargetDatabaseSet>
-    <DefaultSchema>dbo</DefaultSchema>
-    <TargetDatabase>NorthwindDW</TargetDatabase>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>
@@ -49,6 +48,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+    <!-- Default to the v11.0 targets path if the targets file for the current VS version is not found -->
     <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
     <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
   </PropertyGroup>
@@ -56,27 +56,9 @@
   <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
   <ItemGroup>
     <Folder Include="Properties" />
-    <Folder Include="dbo" />
-    <Folder Include="dbo\Tables" />
-    <Folder Include="Publish\" />
+    <Folder Include="Scripts" />
   </ItemGroup>
   <ItemGroup>
-    <Build Include="Dim_Producto.sql" />
-    <Build Include="Dim_Cliente.sql" />
-    <Build Include="Dim_Empleado.sql" />
-    <Build Include="Dim_Tiempo.sql" />
-    <Build Include="Dim_Transportista.sql" />
-    <Build Include="Fact_Ventas.sql" />
-    <Build Include="IX_Fact_Ventas_Producto.sql" />
-    <Build Include="IX_Fact_Ventas_Cliente.sql" />
-    <Build Include="IX_Fact_Ventas_Empleado.sql" />
-    <Build Include="IX_Fact_Ventas_Tiempo.sql" />
-    <Build Include="IX_Fact_Ventas_Transportista.sql" />
-    <Build Include="IX_Fact_Ventas_OrderID.sql" />
-    <Build Include="Carga_Control.sql" />
-    <Build Include="sp_ETL_CargaIncremental.sql" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Publish\NorthwindDW.publish.xml" />
+    <PostDeploy Include="Scripts\02_agregar_rowversion.sql" />
   </ItemGroup>
 </Project>

@@ -7,6 +7,10 @@ CREATE TABLE [dbo].[Dim_Empleado] (
     [Ciudad]            NVARCHAR (15)  NULL,
     [Pais]              NVARCHAR (15)  NULL,
     [NombreSupervisor]  NVARCHAR (40)  NULL,
-    CONSTRAINT [PK_Dim_Empleado] PRIMARY KEY CLUSTERED ([SK_Empleado] ASC),
-    CONSTRAINT [UQ_Dim_Empleado_NatKey] UNIQUE NONCLUSTERED ([EmployeeID] ASC)
+    [Version]           INT            DEFAULT 1 NOT NULL,
+    [FechaInicio]       DATETIME       DEFAULT GETDATE() NOT NULL,
+    [FechaFin]          DATETIME       NULL,
+    [EsActual]          BIT            DEFAULT 1 NOT NULL,
+    [Origen_Version]    BINARY(8)      NULL,
+    CONSTRAINT [PK_Dim_Empleado] PRIMARY KEY CLUSTERED ([SK_Empleado] ASC)
 );

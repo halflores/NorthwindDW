@@ -9,6 +9,10 @@ CREATE TABLE [dbo].[Dim_Producto] (
     [CantidadPorUnidad]    NVARCHAR (20)  NULL,
     [PrecioUnitario]       MONEY          NULL,
     [Descontinuado]        BIT            NOT NULL DEFAULT 0,
-    CONSTRAINT [PK_Dim_Producto] PRIMARY KEY CLUSTERED ([SK_Producto] ASC),
-    CONSTRAINT [UQ_Dim_Producto_NatKey] UNIQUE NONCLUSTERED ([ProductID] ASC)
+    [Version]              INT            DEFAULT 1 NOT NULL,
+    [FechaInicio]          DATETIME       DEFAULT GETDATE() NOT NULL,
+    [FechaFin]             DATETIME       NULL,
+    [EsActual]             BIT            DEFAULT 1 NOT NULL,
+    [Origen_Version]       BINARY(8)      NULL,
+    CONSTRAINT [PK_Dim_Producto] PRIMARY KEY CLUSTERED ([SK_Producto] ASC)
 );

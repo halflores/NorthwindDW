@@ -36,6 +36,11 @@ erDiagram
         NVARCHAR CantidadPorUnidad
         MONEY PrecioUnitario
         BIT Descontinuado
+        INT Version "SCD2"
+        DATETIME FechaInicio "SCD2"
+        DATETIME FechaFin "SCD2"
+        BIT EsActual "SCD2"
+        BINARY Origen_Version "Control"
     }
 
     Dim_Cliente {
@@ -48,6 +53,11 @@ erDiagram
         NVARCHAR Region
         NVARCHAR Pais
         NVARCHAR CodigoPostal
+        INT Version "SCD2"
+        DATETIME FechaInicio "SCD2"
+        DATETIME FechaFin "SCD2"
+        BIT EsActual "SCD2"
+        BINARY Origen_Version "Control"
     }
 
     Dim_Empleado {
@@ -59,6 +69,11 @@ erDiagram
         NVARCHAR Ciudad
         NVARCHAR Pais
         NVARCHAR NombreSupervisor "Self-join"
+        INT Version "SCD2"
+        DATETIME FechaInicio "SCD2"
+        DATETIME FechaFin "SCD2"
+        BIT EsActual "SCD2"
+        BINARY Origen_Version "Control"
     }
 
     Dim_Tiempo {
@@ -79,6 +94,11 @@ erDiagram
         INT ShipperID "Clave Natural"
         NVARCHAR NombreCompania
         NVARCHAR Telefono
+        INT Version "SCD2"
+        DATETIME FechaInicio "SCD2"
+        DATETIME FechaFin "SCD2"
+        BIT EsActual "SCD2"
+        BINARY Origen_Version "Control"
     }
 
     Dim_Producto ||--o{ Fact_Ventas : "SK_Producto"
@@ -127,8 +147,9 @@ Donde:
 
 ## Dimensiones
 
-### `Dim_Producto` — SCD Tipo 1
+### `Dim_Producto` — SCD Tipo 2
 Desnormalización de 3 tablas OLTP: `Products`, `Categories`, `Suppliers`.
+Implementa Slowly Changing Dimension (SCD) Tipo 2 para rastrear el historial de cambios en datos críticos como `PrecioUnitario` o cambio de proveedor.
 
 | Jerarquía | Campos |
 |---|---|

@@ -3,6 +3,10 @@ CREATE TABLE [dbo].[Dim_Transportista] (
     [ShipperID]        INT            NOT NULL,
     [NombreCompania]   NVARCHAR (40)  NOT NULL,
     [Telefono]         NVARCHAR (24)  NULL,
-    CONSTRAINT [PK_Dim_Transportista] PRIMARY KEY CLUSTERED ([SK_Transportista] ASC),
-    CONSTRAINT [UQ_Dim_Transportista_NatKey] UNIQUE NONCLUSTERED ([ShipperID] ASC)
+    [Version]          INT            DEFAULT 1 NOT NULL,
+    [FechaInicio]      DATETIME       DEFAULT GETDATE() NOT NULL,
+    [FechaFin]         DATETIME       NULL,
+    [EsActual]         BIT            DEFAULT 1 NOT NULL,
+    [Origen_Version]   BINARY(8)      NULL,
+    CONSTRAINT [PK_Dim_Transportista] PRIMARY KEY CLUSTERED ([SK_Transportista] ASC)
 );

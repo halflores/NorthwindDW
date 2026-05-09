@@ -8,6 +8,10 @@ CREATE TABLE [dbo].[Dim_Cliente] (
     [Region]          NVARCHAR (15)  NULL,
     [Pais]            NVARCHAR (15)  NULL,
     [CodigoPostal]    NVARCHAR (10)  NULL,
-    CONSTRAINT [PK_Dim_Cliente] PRIMARY KEY CLUSTERED ([SK_Cliente] ASC),
-    CONSTRAINT [UQ_Dim_Cliente_NatKey] UNIQUE NONCLUSTERED ([CustomerID] ASC)
+    [Version]         INT            DEFAULT 1 NOT NULL,
+    [FechaInicio]     DATETIME       DEFAULT GETDATE() NOT NULL,
+    [FechaFin]        DATETIME       NULL,
+    [EsActual]        BIT            DEFAULT 1 NOT NULL,
+    [Origen_Version]  BINARY(8)      NULL,
+    CONSTRAINT [PK_Dim_Cliente] PRIMARY KEY CLUSTERED ([SK_Cliente] ASC)
 );

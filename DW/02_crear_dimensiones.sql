@@ -49,9 +49,13 @@ CREATE TABLE dbo.Dim_Producto (
     CantidadPorUnidad       NVARCHAR(20)        NULL,
     PrecioUnitario          MONEY               NULL,
     Descontinuado           BIT                 NOT NULL DEFAULT 0,
+    Version                 INT                 NOT NULL DEFAULT 1,
+    FechaInicio             DATETIME            NOT NULL DEFAULT GETDATE(),
+    FechaFin                DATETIME            NULL,
+    EsActual                BIT                 NOT NULL DEFAULT 1,
+    Origen_Version          BINARY(8)           NULL,
 
-    CONSTRAINT PK_Dim_Producto PRIMARY KEY CLUSTERED (SK_Producto),
-    CONSTRAINT UQ_Dim_Producto_NatKey UNIQUE (ProductID)
+    CONSTRAINT PK_Dim_Producto PRIMARY KEY CLUSTERED (SK_Producto)
 );
 GO
 
@@ -72,9 +76,13 @@ CREATE TABLE dbo.Dim_Cliente (
     Region                  NVARCHAR(15)        NULL,
     Pais                    NVARCHAR(15)        NULL,
     CodigoPostal            NVARCHAR(10)        NULL,
+    Version                 INT                 NOT NULL DEFAULT 1,
+    FechaInicio             DATETIME            NOT NULL DEFAULT GETDATE(),
+    FechaFin                DATETIME            NULL,
+    EsActual                BIT                 NOT NULL DEFAULT 1,
+    Origen_Version          BINARY(8)           NULL,
 
-    CONSTRAINT PK_Dim_Cliente PRIMARY KEY CLUSTERED (SK_Cliente),
-    CONSTRAINT UQ_Dim_Cliente_NatKey UNIQUE (CustomerID)
+    CONSTRAINT PK_Dim_Cliente PRIMARY KEY CLUSTERED (SK_Cliente)
 );
 GO
 
@@ -94,9 +102,13 @@ CREATE TABLE dbo.Dim_Empleado (
     Ciudad                  NVARCHAR(15)        NULL,
     Pais                    NVARCHAR(15)        NULL,
     NombreSupervisor        NVARCHAR(40)        NULL,       -- Self-join a ReportsTo
+    Version                 INT                 NOT NULL DEFAULT 1,
+    FechaInicio             DATETIME            NOT NULL DEFAULT GETDATE(),
+    FechaFin                DATETIME            NULL,
+    EsActual                BIT                 NOT NULL DEFAULT 1,
+    Origen_Version          BINARY(8)           NULL,
 
-    CONSTRAINT PK_Dim_Empleado PRIMARY KEY CLUSTERED (SK_Empleado),
-    CONSTRAINT UQ_Dim_Empleado_NatKey UNIQUE (EmployeeID)
+    CONSTRAINT PK_Dim_Empleado PRIMARY KEY CLUSTERED (SK_Empleado)
 );
 GO
 
@@ -136,9 +148,13 @@ CREATE TABLE dbo.Dim_Transportista (
     ShipperID               INT                 NOT NULL,   -- Clave natural
     NombreCompania          NVARCHAR(40)        NOT NULL,
     Telefono                NVARCHAR(24)        NULL,
+    Version                 INT                 NOT NULL DEFAULT 1,
+    FechaInicio             DATETIME            NOT NULL DEFAULT GETDATE(),
+    FechaFin                DATETIME            NULL,
+    EsActual                BIT                 NOT NULL DEFAULT 1,
+    Origen_Version          BINARY(8)           NULL,
 
-    CONSTRAINT PK_Dim_Transportista PRIMARY KEY CLUSTERED (SK_Transportista),
-    CONSTRAINT UQ_Dim_Transportista_NatKey UNIQUE (ShipperID)
+    CONSTRAINT PK_Dim_Transportista PRIMARY KEY CLUSTERED (SK_Transportista)
 );
 GO
 
