@@ -9,8 +9,9 @@ CREATE TABLE [dbo].[Fact_Ventas] (
     [PrecioUnitario]   MONEY     NOT NULL,
     [Cantidad]         SMALLINT  NOT NULL,
     [Descuento]        REAL      NOT NULL,
-    [MontoVenta]       MONEY     NOT NULL,
-    [FleteProrrateado] MONEY     NOT NULL,
+    [MontoVenta]       MONEY         NOT NULL,
+    [FleteProrrateado] MONEY         NOT NULL,
+    [TipoTransaccion]  NVARCHAR (30) DEFAULT ('Venta Original') NOT NULL,
     CONSTRAINT [PK_Fact_Ventas] PRIMARY KEY CLUSTERED ([FactVentaID] ASC),
     CONSTRAINT [FK_Fact_Producto] FOREIGN KEY ([SK_Producto])
         REFERENCES [dbo].[Dim_Producto] ([SK_Producto]),

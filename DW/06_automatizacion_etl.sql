@@ -1,7 +1,7 @@
 /*
 ==========================================================================
   NORTHWIND DATA WAREHOUSE
-  Script 08b: ETL Incremental con SCD Tipo 2 (MERGE)
+  Script 06: ETL Incremental con SCD Tipo 2 (MERGE)
   
   Descripción : Versión actualizada del SP maestro para implementar:
                 1. SCD Tipo 2 en Dimensiones (Guarda Historial).
@@ -9,7 +9,12 @@
 ==========================================================================
 */
 
+USE NorthwindDW;
+GO
 
+IF OBJECT_ID('dbo.sp_ETL_CargaIncremental', 'P') IS NOT NULL
+    DROP PROCEDURE dbo.sp_ETL_CargaIncremental;
+GO
 
 CREATE PROCEDURE dbo.sp_ETL_CargaIncremental
 AS
@@ -390,20 +395,4 @@ BEGIN
     DROP TABLE #SaldosDW; DROP TABLE #Borrados;    
     PRINT 'Proceso Incremental finalizado.';
 END
-GO
-
--- =====================================================================
--- PARTE 4: ACTUALIZAR EL SQL SERVER AGENT JOB
--- Cambia el paso del Job existente para que ejecute este nuevo SP.
--- =====================================================================
-USE msdb;
-GO
-
-EXEC msdb.dbo.sp_update_jobstep
-    @job_name   = N'Job_ETL_NorthwindDW',
-    @step_id    = 1,
-    @command    = N'EXEC NorthwindDW.dbo.sp_ETL_CargaIncremental;';
-GO
-
-PRINT '>> Job actualizado para usar el ETL Incremental.';
 GO

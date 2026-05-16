@@ -1,7 +1,7 @@
 /*
 ==========================================================================
   NORTHWIND DATA WAREHOUSE
-  Script 02b: Tabla de Control para Carga Incremental
+  Script 04: Tabla de Control para Carga Incremental
   
   Descripción : Crea la tabla que guarda el último ROWVERSION procesado
                 para cada tabla de origen del OLTP.
@@ -31,7 +31,8 @@ VALUES
     ('Customers', 0x0000000000000000),
     ('Employees', 0x0000000000000000),
     ('Shippers', 0x0000000000000000),
-    ('Orders', 0x0000000000000000);
+    ('Orders', 0x0000000000000000),
+    ('Order Details', 0x0000000000000000);
 GO
 
 PRINT '>> Tabla Carga_Control creada e inicializada.';

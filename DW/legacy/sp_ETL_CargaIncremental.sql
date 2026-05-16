@@ -9,12 +9,7 @@
 ==========================================================================
 */
 
-USE NorthwindDW;
-GO
 
-IF OBJECT_ID('dbo.sp_ETL_CargaIncremental', 'P') IS NOT NULL
-    DROP PROCEDURE dbo.sp_ETL_CargaIncremental;
-GO
 
 CREATE PROCEDURE dbo.sp_ETL_CargaIncremental
 AS
@@ -230,6 +225,169 @@ BEGIN
         PRINT 'Dim_Transportista: No hay cambios nuevos.';
     END
     
+    -- ===================================================================
+    -- FACT_VENTAS: Carga Incremental (Append-Only con Asientos de Reverso)
+    -- ===================================================================
+    DECLARE @UltimoRV_Orders BINARY(8);
+    DECLARE @UltimoRV_OrderDetails BINARY(8);
+    DECLARE @NuevoRV_Orders BINARY(8);
+    DECLARE @NuevoRV_OrderDetails BINARY(8);
+
+    SELECT @UltimoRV_Orders = UltimoRowVersion FROM dbo.Carga_Control WHERE TablaOrigen = 'Orders';
+    SELECT @UltimoRV_OrderDetails = UltimoRowVersion FROM dbo.Carga_Control WHERE TablaOrigen = 'Order Details';
+    
+    SELECT @NuevoRV_Orders = ISNULL(MAX(VersionFila), 0x0) FROM Northwind.dbo.Orders;
+    SELECT @NuevoRV_OrderDetails = ISNULL(MAX(VersionFila), 0x0) FROM Northwind.dbo.[Order Details];
+
+    IF @NuevoRV_Orders > @UltimoRV_Orders OR @NuevoRV_OrderDetails > @UltimoRV_OrderDetails
+    BEGIN
+        -- 1. Extraer los deltas (Nuevos o Modificados)
+        -- A. Identificar qué OrderIDs han sido afectados
+        SELECT DISTINCT OrderID INTO #AffectedOrders
+        FROM Northwind.dbo.Orders WHERE VersionFila > @UltimoRV_Orders
+        UNION
+        SELECT DISTINCT OrderID
+        FROM Northwind.dbo.[Order Details] WHERE VersionFila > @UltimoRV_OrderDetails;
+
+        -- B. Calcular el subtotal de las ordenes afectadas (para el prorrateo de flete)
+        SELECT 
+            od.OrderID,
+            SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)) AS SubtotalOrden
+        INTO #OrderSubtotals
+        FROM Northwind.dbo.[Order Details] od
+        INNER JOIN #AffectedOrders ao ON od.OrderID = ao.OrderID
+        GROUP BY od.OrderID;
+
+        -- C. Obtener el detalle completo fresco de esas órdenes
+        SELECT 
+            od.OrderID,
+            od.ProductID,
+            o.CustomerID,
+            o.EmployeeID,
+            CONVERT(INT, CONVERT(VARCHAR(8), o.OrderDate, 112)) AS SK_Tiempo,
+            o.ShipVia AS ShipperID,
+            od.UnitPrice AS PrecioUnitario,
+            od.Quantity AS Cantidad,
+            od.Discount AS Descuento,
+            (od.UnitPrice * od.Quantity * (1 - od.Discount)) AS MontoLinea,
+            CASE WHEN os.SubtotalOrden = 0 THEN 0 
+                 ELSE o.Freight * ((od.UnitPrice * od.Quantity * (1 - od.Discount)) / os.SubtotalOrden)
+            END AS FleteProrrateado
+        INTO #NuevosHechos
+        FROM Northwind.dbo.[Order Details] od
+        INNER JOIN Northwind.dbo.Orders o ON od.OrderID = o.OrderID
+        INNER JOIN #AffectedOrders ao ON od.OrderID = ao.OrderID
+        INNER JOIN #OrderSubtotals os ON od.OrderID = os.OrderID;
+
+        -- Cruzamos con Dimensiones
+        SELECT 
+            ISNULL(dp.SK_Producto, -1) AS SK_Producto,
+            ISNULL(dc.SK_Cliente, -1) AS SK_Cliente,
+            ISNULL(de.SK_Empleado, -1) AS SK_Empleado,
+            nh.SK_Tiempo,
+            ISNULL(dt.SK_Transportista, -1) AS SK_Transportista,
+            nh.OrderID, nh.ProductID, nh.PrecioUnitario, nh.Cantidad, nh.Descuento,
+            nh.MontoLinea AS MontoVenta, nh.FleteProrrateado
+        INTO #HechosTransformados
+        FROM #NuevosHechos nh
+        LEFT JOIN dbo.Dim_Producto dp ON nh.ProductID = dp.ProductID AND dp.EsActual = 1
+        LEFT JOIN dbo.Dim_Cliente dc ON nh.CustomerID = dc.CustomerID AND dc.EsActual = 1
+        LEFT JOIN dbo.Dim_Empleado de ON nh.EmployeeID = de.EmployeeID AND de.EsActual = 1
+        LEFT JOIN dbo.Dim_Transportista dt ON nh.ShipperID = dt.ShipperID AND dt.EsActual = 1;
+
+        -- FASE 1: UPSERT (Reversos y Nuevas Inserciones)
+        -- 1.A. Identificar líneas que ya existían (Actualizaciones)
+        SELECT 
+            fv.OrderID, dp.ProductID, fv.SK_Producto, fv.SK_Cliente, fv.SK_Empleado, fv.SK_Tiempo, fv.SK_Transportista,
+            fv.PrecioUnitario, SUM(fv.Cantidad) AS CantidadNeta, fv.Descuento,
+            SUM(fv.MontoVenta) AS MontoVentaNeto, SUM(fv.FleteProrrateado) AS FleteNeto
+        INTO #SaldosExistentes
+        FROM dbo.Fact_Ventas fv
+        INNER JOIN dbo.Dim_Producto dp ON fv.SK_Producto = dp.SK_Producto
+        INNER JOIN #HechosTransformados ht ON fv.OrderID = ht.OrderID AND dp.ProductID = ht.ProductID
+        GROUP BY 
+            fv.OrderID, dp.ProductID, fv.SK_Producto, fv.SK_Cliente, fv.SK_Empleado, fv.SK_Tiempo, fv.SK_Transportista,
+            fv.PrecioUnitario, fv.Descuento
+        HAVING SUM(fv.Cantidad) > 0;
+
+        -- 1.B. Insertar REVERSOS
+        INSERT INTO dbo.Fact_Ventas (
+            SK_Producto, SK_Cliente, SK_Empleado, SK_Tiempo, SK_Transportista, OrderID, PrecioUnitario, Cantidad, Descuento, MontoVenta, FleteProrrateado, TipoTransaccion
+        )
+        SELECT 
+            SK_Producto, SK_Cliente, SK_Empleado, SK_Tiempo, SK_Transportista, OrderID, PrecioUnitario, 
+            -CantidadNeta, Descuento, -MontoVentaNeto, -FleteNeto, 'Reverso por Actualización'
+        FROM #SaldosExistentes;
+
+        -- 1.C. Insertar NUEVO ESTADO
+        INSERT INTO dbo.Fact_Ventas (
+            SK_Producto, SK_Cliente, SK_Empleado, SK_Tiempo, SK_Transportista, OrderID, PrecioUnitario, Cantidad, Descuento, MontoVenta, FleteProrrateado, TipoTransaccion
+        )
+        SELECT 
+            ht.SK_Producto, ht.SK_Cliente, ht.SK_Empleado, ht.SK_Tiempo, ht.SK_Transportista, ht.OrderID, ht.PrecioUnitario, ht.Cantidad, ht.Descuento, ht.MontoVenta, ht.FleteProrrateado, 'Nueva Versión'
+        FROM #HechosTransformados ht
+        INNER JOIN #SaldosExistentes se ON ht.OrderID = se.OrderID AND ht.ProductID = se.ProductID;
+
+        -- 1.D. Insertar NUEVAS
+        INSERT INTO dbo.Fact_Ventas (
+            SK_Producto, SK_Cliente, SK_Empleado, SK_Tiempo, SK_Transportista, OrderID, PrecioUnitario, Cantidad, Descuento, MontoVenta, FleteProrrateado, TipoTransaccion
+        )
+        SELECT 
+            ht.SK_Producto, ht.SK_Cliente, ht.SK_Empleado, ht.SK_Tiempo, ht.SK_Transportista, ht.OrderID, ht.PrecioUnitario, ht.Cantidad, ht.Descuento, ht.MontoVenta, ht.FleteProrrateado, 'Venta Original'
+        FROM #HechosTransformados ht
+        LEFT JOIN #SaldosExistentes se ON ht.OrderID = se.OrderID AND ht.ProductID = se.ProductID
+        WHERE se.OrderID IS NULL;
+
+        DROP TABLE #AffectedOrders; DROP TABLE #OrderSubtotals; DROP TABLE #NuevosHechos; DROP TABLE #HechosTransformados; DROP TABLE #SaldosExistentes;
+
+        UPDATE dbo.Carga_Control SET UltimoRowVersion = @NuevoRV_Orders, FechaActualizacion = GETDATE() WHERE TablaOrigen = 'Orders';
+        UPDATE dbo.Carga_Control SET UltimoRowVersion = @NuevoRV_OrderDetails, FechaActualizacion = GETDATE() WHERE TablaOrigen = 'Order Details';
+
+        PRINT 'Fact_Ventas: Inserciones y Actualizaciones procesadas.';
+    END
+    ELSE
+    BEGIN
+        PRINT 'Fact_Ventas: No hay órdenes nuevas ni modificadas.';
+    END
+
+    -- ===================================================================
+    -- FASE 2: RECONCILIACIÓN DE BORRADOS FÍSICOS (Hard Deletes)
+    -- ===================================================================
+    PRINT 'Iniciando Reconciliación de Borrados...';
+    
+    SELECT 
+        fv.OrderID, dp.ProductID, fv.SK_Producto, fv.SK_Cliente, fv.SK_Empleado, fv.SK_Tiempo, fv.SK_Transportista,
+        fv.PrecioUnitario, fv.Descuento, SUM(fv.Cantidad) AS CantidadNeta, SUM(fv.MontoVenta) AS MontoVentaNeto, SUM(fv.FleteProrrateado) AS FleteNeto
+    INTO #SaldosDW
+    FROM dbo.Fact_Ventas fv
+    INNER JOIN dbo.Dim_Producto dp ON fv.SK_Producto = dp.SK_Producto
+    GROUP BY 
+        fv.OrderID, dp.ProductID, fv.SK_Producto, fv.SK_Cliente, fv.SK_Empleado, fv.SK_Tiempo, fv.SK_Transportista,
+        fv.PrecioUnitario, fv.Descuento
+    HAVING SUM(fv.Cantidad) > 0;
+
+    SELECT dw.* INTO #Borrados
+    FROM #SaldosDW dw
+    LEFT JOIN Northwind.dbo.[Order Details] od ON dw.OrderID = od.OrderID AND dw.ProductID = od.ProductID
+    WHERE od.OrderID IS NULL;
+
+    IF EXISTS (SELECT 1 FROM #Borrados)
+    BEGIN
+        INSERT INTO dbo.Fact_Ventas (
+            SK_Producto, SK_Cliente, SK_Empleado, SK_Tiempo, SK_Transportista, OrderID, PrecioUnitario, Cantidad, Descuento, MontoVenta, FleteProrrateado, TipoTransaccion
+        )
+        SELECT 
+            SK_Producto, SK_Cliente, SK_Empleado, SK_Tiempo, SK_Transportista, OrderID, PrecioUnitario, -CantidadNeta, Descuento, -MontoVentaNeto, -FleteNeto, 'Reverso por Borrado'
+        FROM #Borrados;
+        
+        PRINT 'Fact_Ventas: Borrados reconciliados exitosamente.';
+    END
+    ELSE
+    BEGIN
+        PRINT 'Fact_Ventas: No se detectaron ventas eliminadas.';
+    END
+
+    DROP TABLE #SaldosDW; DROP TABLE #Borrados;    
     PRINT 'Proceso Incremental finalizado.';
 END
 GO

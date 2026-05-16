@@ -187,14 +187,13 @@ northwind/
 ├── DW/
 │   ├── 01_crear_base_datos_dw.sql         ← Crea la BD NorthwindDW
 │   ├── 02_crear_dimensiones.sql           ← DDL de dimensiones (SCD2, sin UNIQUE)
-│   ├── 02b_crear_control_etl.sql          ← DDL de tabla Carga_Control
-│   ├── 03_crear_tabla_hechos.sql          ← DDL de Fact_Ventas + índices
-│   ├── 04_poblar_dim_tiempo.sql           ← Genera fechas 1996-1998
-│   ├── 05_poblar_dimensiones.sql          ← (Legado) Carga inicial sin versiones
-│   ├── 06_poblar_hechos.sql               ← ETL: Poblar Fact_Ventas con prorrateo
-│   ├── 07_consultas_analiticas.sql        ← 10 consultas analíticas de ejemplo
-│   ├── 08_automatizacion_etl.sql          ← (Legado) SP de carga completa
-│   └── 08b_automatizacion_etl_scd.sql     ← SP Incremental con SCD2 + Job config
+│   ├── 03_crear_tabla_hechos.sql          ← DDL de Fact_Ventas (Append-Only) + índices
+│   ├── 04_crear_control_etl.sql           ← DDL de tabla Carga_Control
+│   ├── 05_poblar_dim_tiempo.sql           ← Genera fechas 1996-1998
+│   ├── 06_automatizacion_etl.sql          ← SP Incremental con SCD2
+│   ├── 07_crear_job_agente.sql            ← Crea el Job en SQL Server Agent
+│   ├── 08_consultas_analiticas.sql        ← 10 consultas analíticas de ejemplo
+│   └── legacy/                            ← Scripts de carga completa antiguos
 ├── DACPAC/
 │   ├── OLTP/
 │   │   └── NorthWind_OLTP/                ← Proyecto SSDT para OLTP (PostDeploy)
@@ -231,11 +230,12 @@ Ejecutar los scripts **en orden secuencial** en SSMS:
 ```
 1. DW/01_crear_base_datos_dw.sql     → Crea la BD NorthwindDW
 2. DW/02_crear_dimensiones.sql       → Crea las 5 tablas de dimensiones (SCD2)
-3. DW/02b_crear_control_etl.sql      → Crea la tabla Carga_Control
-4. DW/03_crear_tabla_hechos.sql      → Crea Fact_Ventas con FK e índices
-5. DW/04_poblar_dim_tiempo.sql       → Genera 1,096 registros de fecha
-6. DW/06_poblar_hechos.sql           → Carga Fact_Ventas (Carga inicial)
-7. DW/08b_automatizacion_etl_scd.sql → Crea SP Incremental y actualiza el Job
+3. DW/03_crear_tabla_hechos.sql      → Crea Fact_Ventas con FK e índices (Append-Only)
+4. DW/04_crear_control_etl.sql       → Crea la tabla Carga_Control
+5. DW/05_poblar_dim_tiempo.sql       → Genera 1,096 registros de fecha
+6. DW/06_automatizacion_etl.sql      → Crea SP Incremental
+7. DW/07_crear_job_agente.sql        → Crea el Job en SQL Server Agent
+8. DW/08_consultas_analiticas.sql    → Consultas analíticas para probar el DW
 ```
 
 ### Paso 3: Generar el DACPAC (Opcional)

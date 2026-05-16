@@ -70,6 +70,9 @@ CREATE TABLE dbo.Fact_Ventas (
     MontoVenta              MONEY               NOT NULL,   -- = PrecioUnitario × Cantidad × (1 - Descuento)
     FleteProrrateado        MONEY               NOT NULL,   -- Flete distribuido proporcionalmente
 
+    -- Auditoría Append-Only
+    TipoTransaccion         NVARCHAR(30)        NOT NULL DEFAULT 'Venta Original',
+
     -- Constraints
     CONSTRAINT PK_Fact_Ventas PRIMARY KEY CLUSTERED (FactVentaID),
 

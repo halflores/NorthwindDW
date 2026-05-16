@@ -1,7 +1,7 @@
 /*
 ==========================================================================
   NORTHWIND DATA WAREHOUSE
-  Script 04: Poblar Dimensión de Tiempo (Dim_Tiempo)
+  Script 05: Poblado de Dimensión de Tiempo (Generación Continua)
   
   Descripción : Genera registros de fecha desde 1996-01-01 hasta 1998-12-31.
                  Este rango cubre todas las fechas de órdenes de Northwind.
